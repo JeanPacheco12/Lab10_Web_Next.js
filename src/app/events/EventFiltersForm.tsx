@@ -6,18 +6,16 @@
 // ## Client Component
 // Lo hemos convertido a 'use client' para permitir:
 // 1. Auto-submit al cambiar selectores (UX más fluida)
-// 2. Mantener la URL sincronizada sin recargas completas
+// 2. Mantener la URL sincronizada sin recargas completas (usando useRouter)
 // 3. Búsqueda con debounce para escribir y filtrar automáticamente
-//
-// ## Progressive Enhancement
-// Aunque usamos JS para mejorar la UX, el formulario sigue usando 
-// method="GET" y action="/events", por lo que es robusto y estándar.
 // =============================================================================
 
 'use client';
 
 import { Search } from 'lucide-react';
 import Link from 'next/link';
+// Importamos los hooks de navegación de Next.js
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EVENT_CATEGORIES, CATEGORY_LABELS, EVENT_STATUSES, STATUS_LABELS, type EventCategory } from '@/types/event';
@@ -37,6 +35,10 @@ interface EventFiltersFormProps {
  * Formulario de filtros de eventos (Client Component).
  */
 export function EventFiltersForm({ currentFilters }: EventFiltersFormProps): React.ReactElement {
+  // Instanciamos los hooks de navegación
+  const router = useRouter();
+  const pathname = usePathname();
+
   const formRef = useRef<HTMLFormElement>(null);
 
   // Estado local para el input de búsqueda
@@ -73,10 +75,28 @@ export function EventFiltersForm({ currentFilters }: EventFiltersFormProps): Rea
     setSearchTerm(e.target.value);
   };
 
+  // NUEVO: Handler para interceptar el envío del formulario
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Evitamos la recarga completa del navegador
+
+    const formData = new FormData(e.currentTarget);
+    const params = new URLSearchParams();
+
+    // Construimos los query params, ignorando los que estén vacíos
+    formData.forEach((value, key) => {
+      if (value && value.toString().trim() !== '') {
+        params.set(key, value.toString());
+      }
+    });
+
+    // Actualizamos la URL usando Next.js Router (ej: /events?category=music)
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   return (
     <div className="space-y-4 rounded-lg border bg-card p-4">
-      {/* Formulario con method GET */}
-      <form ref={formRef} method="GET" action="/events" className="space-y-4">
+      {/* Añadimos onSubmit={handleSubmit} */}
+      <form ref={formRef} onSubmit={handleSubmit} method="GET" action="/events" className="space-y-4">
         {/* Búsqueda */}
         <div className="flex gap-2">
           <div className="relative flex-1">
