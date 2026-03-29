@@ -24,5 +24,4 @@ Implementación del hook `useOptimistic` en el proceso de registro a eventos par
 * **Revalidación de Caché:** Uso de `revalidatePath` para asegurar que los datos estén frescos en todas las rutas tras una mutación. 
 
 ## Video Explicativo
-Puedes ver la explicación detallada del funcionamiento y el código en el siguiente enlace:
-[Link al video del Laboratorio]
+(https://youtu.be/w8xCd2lI4FU)
