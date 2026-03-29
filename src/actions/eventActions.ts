@@ -322,7 +322,14 @@ export async function registerForEventAction(id: string): Promise<FormState> {
     };
   }
 
+  // Actualiza la página de detalles del evento
   revalidatePath(`/events/${id}`);
+  
+  // NUEVO: Actualiza la lista principal de eventos para reflejar la nueva capacidad
+  revalidatePath('/events');
+  
+  // NUEVO: Actualiza la página de inicio (por si hay un resumen de eventos allí)
+  revalidatePath('/');
 
   return {
     success: true,
