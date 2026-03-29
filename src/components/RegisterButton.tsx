@@ -18,10 +18,12 @@
 
 'use client';
 
-import { useOptimistic, useTransition } from 'react';
+// Agregamos useState para manejar los mensajes de feedback
+import { useOptimistic, useTransition, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { registerForEventAction } from '@/actions/eventActions';
-import { Loader2, CheckCircle } from 'lucide-react';
+// Agregamos AlertCircle para los mensajes de error
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RegisterButtonProps {
@@ -49,6 +51,9 @@ export function RegisterButton({
    * isPending indica si hay una transición en progreso.
    */
   const [isPending, startTransition] = useTransition();
+  
+  // Estado local para capturar el feedback del servidor
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   /**
    * useOptimistic crea un estado optimista.
@@ -63,24 +68,33 @@ export function RegisterButton({
   );
 
   // Estado derivado
-  const showRegistered = optimisticSpots < availableSpots;
+  // Modificamos lógica derivada para considerar el feedback de éxito del servidor
+  const showRegistered = optimisticSpots < availableSpots || feedback?.type === 'success';
   const canRegister = isAvailable && optimisticSpots > 0 && !showRegistered;
 
   /**
    * Handler del registro.
    */
   async function handleRegister(): Promise<void> {
+    // Limpiamos feedback anterior al hacer clic
+    setFeedback(null);
+    
     // 1. Actualización optimista inmediata
     addOptimistic('register');
 
     // 2. Ejecutar Server Action en una transición
     startTransition(async () => {
+      // Capturamos el resultado real del servidor
       const result = await registerForEventAction(eventId);
 
       if (!result.success) {
         // Si falla, podríamos mostrar un toast de error
         // El estado optimista se revierte automáticamente
-        console.error('Error al registrar:', result.message);
+        //console.error('Error al registrar:', result.message); <-- Reemplazamos console por estado visual
+        setFeedback({ type: 'error', message: result.message || 'Error al registrarse' });
+      } else {
+        // Confirmación de éxito real
+        setFeedback({ type: 'success', message: result.message || '¡Registro exitoso!' });
       }
     });
   }
@@ -88,10 +102,16 @@ export function RegisterButton({
   // Si ya se registró (optimísticamente)
   if (showRegistered) {
     return (
-      <Button variant="secondary" disabled className="w-full gap-2">
-        <CheckCircle className="h-4 w-4" />
-        ¡Registrado!
-      </Button>
+      <div className="w-full space-y-2">
+        <Button variant="secondary" disabled className="w-full gap-2 text-green-700 bg-green-50 hover:bg-green-50">
+          <CheckCircle className="h-4 w-4" />
+          ¡Registrado!
+        </Button>
+        {/* Mostramos el mensaje de éxito real si existe */}
+        {feedback?.type === 'success' && (
+           <p className="text-xs text-green-600 text-center font-medium">{feedback.message}</p>
+        )}
+      </div>
     );
   }
 
@@ -105,19 +125,29 @@ export function RegisterButton({
   }
 
   return (
-    <Button
-      onClick={handleRegister}
-      disabled={isPending}
-      className={cn('w-full gap-2', isPending && 'cursor-wait')}
-    >
-      {isPending ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Registrando...
-        </>
-      ) : (
-        `Registrarme (${optimisticSpots} plazas)`
+    <div className="w-full space-y-2">
+      <Button
+        onClick={handleRegister}
+        disabled={isPending}
+        className={cn('w-full gap-2 transition-all', isPending && 'cursor-wait opacity-80')}
+      >
+        {isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Registrando...
+          </>
+        ) : (
+          `Registrarme (${optimisticSpots} plazas)`
+        )}
+      </Button>
+      
+      {/* Mostramos mensaje de error si la acción falló y useOptimistic revirtió */}
+      {feedback?.type === 'error' && (
+        <p className="text-xs text-destructive text-center flex items-center justify-center gap-1.5 font-medium">
+          <AlertCircle className="h-3.5 w-3.5" />
+          {feedback.message}
+        </p>
       )}
-    </Button>
+    </div>
   );
 }
